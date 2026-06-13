@@ -1,90 +1,77 @@
-console.log('Country filter loaded');
 (function () {
 
     'use strict';
 
-    let enabled = Lampa.Storage.get('country_filter_enabled', true);
+    console.log('Country filter (always ON) loaded');
 
-    const asianCountries = [
-        'India', 'China', 'Japan', 'South Korea', 'Thailand',
-        'Hong Kong', 'Taiwan', 'Indonesia', 'Philippines',
-        'Vietnam', 'Malaysia', 'Singapore', 'Pakistan', 'Bangladesh'
+    const blockedCountries = [
+        'india', 'indian',
+        'china', 'chinese',
+        'japan', 'japanese',
+        'south korea', 'korea', 'korean',
+        'thailand',
+        'hong kong',
+        'taiwan',
+        'indonesia',
+        'philippines',
+        'vietnam',
+        'malaysia',
+        'singapore',
+        'pakistan',
+        'bangladesh'
     ];
 
+    function normalize(text) {
+        if (!text) return '';
+        return text.toString().toLowerCase();
+    }
+
     function isBlocked(item) {
-        if (!enabled) return false;
 
-        let country = (item.country || item.countries || '').toString();
-        let genre = (item.genre || item.genres || '').toString();
-        let title = (item.title || '').toLowerCase();
+        if (!item) return false;
 
-        // перевірка по країнах
-        for (let c of asianCountries) {
+        let country = normalize(item.country || item.countries || item.origin || item.origins);
+        let genre = normalize(item.genre || item.genres || '');
+        let title = normalize(item.title || item.name || '');
+
+        // 1. перевірка по країні / походженню
+        for (let c of blockedCountries) {
             if (country.includes(c)) return true;
         }
 
-        // додатковий фільтр по тегах (якщо API повертає азійські маркери)
-        const asianTags = ['asian', 'india', 'korea', 'japan', 'china'];
-        for (let t of asianTags) {
-            if (genre.toLowerCase().includes(t)) return true;
+        // 2. деякі API кладуть країну в текст жанру/тегів
+        for (let c of blockedCountries) {
+            if (genre.includes(c)) return true;
         }
 
-        // optional: ручні ключові слова в назві
-        const badKeywords = ['bollywood', 'hindi'];
-        for (let k of badKeywords) {
-            if (title.includes(k)) return true;
-        }
+        // 3. додаткові ключові слова
+        if (title.includes('bollywood')) return true;
+        if (title.includes('hindi')) return true;
 
         return false;
     }
 
-    function filterItems(items) {
-        if (!enabled) return items;
-        if (!Array.isArray(items)) return items;
-
-        return items.filter(item => !isBlocked(item));
+    function filterList(list) {
+        if (!Array.isArray(list)) return list;
+        return list.filter(item => !isBlocked(item));
     }
 
-    // Перехоплення списків Lampa
+    // Основний перехоплювач списків Lampa
     Lampa.Listener.follow('line', function (e) {
-        if (e.type === 'append' && e.items) {
-            e.items = filterItems(e.items);
+
+        if (!e || !e.items) return;
+
+        if (e.type === 'append' || e.type === 'more') {
+            e.items = filterList(e.items);
         }
+
     });
 
-    // UI налаштування
-    (function () {
-
-    function init() {
-
-        if (!Lampa.SettingsApi) {
-            setTimeout(init, 500);
-            return;
+    // Додатковий фільтр для деяких оновлень UI
+    Lampa.Listener.follow('content', function (e) {
+        if (e && e.data && e.data.items) {
+            e.data.items = filterList(e.data.items);
         }
-
-        Lampa.SettingsApi.addParam({
-            component: 'interface',
-            param: {
-                name: 'country_filter_enabled',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Фільтр Азія',
-                description: 'Приховує індійські та азійські фільми'
-            },
-            onChange: function (value) {
-                Lampa.Storage.set('country_filter_enabled', value);
-            }
-        });
-
-        console.log('Settings added');
-    }
-
-    init();
-
-})();
-
-    console.log('Country Filter plugin loaded');
+    });
 
 })();
