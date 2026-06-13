@@ -53,22 +53,37 @@ console.log('Country filter loaded');
     });
 
     // UI налаштування
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'country_filter_enabled',
-            type: 'trigger',
-            default: true
-        },
-        field: {
-            name: 'Фільтр Індія/Азія',
-            description: 'Приховує індійські та азійські фільми'
-        },
-        onChange: function (value) {
-            enabled = value;
-            Lampa.Storage.set('country_filter_enabled', value);
+    (function () {
+
+    function init() {
+
+        if (!Lampa.SettingsApi) {
+            setTimeout(init, 500);
+            return;
         }
-    });
+
+        Lampa.SettingsApi.addParam({
+            component: 'interface',
+            param: {
+                name: 'country_filter_enabled',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Фільтр Азія',
+                description: 'Приховує індійські та азійські фільми'
+            },
+            onChange: function (value) {
+                Lampa.Storage.set('country_filter_enabled', value);
+            }
+        });
+
+        console.log('Settings added');
+    }
+
+    init();
+
+})();
 
     console.log('Country Filter plugin loaded');
 
