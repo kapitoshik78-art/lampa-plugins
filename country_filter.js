@@ -1,3 +1,4 @@
+console.log('Country filter loaded');
 (function () {
 
     'use strict';
